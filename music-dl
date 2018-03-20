@@ -35,6 +35,9 @@ done
 if command -v eyeD3 >/dev/null; then
 	printAction 'Cleaning metadata using eyeD3...'
 	eyeD3 --remove-all "${TMP_DIR}"/after/*.mp3
+elif command -v id3convert >/dev/null; then
+	printAction 'Cleaning metadata using id3lib...'
+	id3convert --strip "${TMP_DIR}"/after/*.mp3
 elif command -v mat >/dev/null; then
 	printAction 'Cleaning metadata using MAT...'
 	mat "${TMP_DIR}"/after/*.mp3
