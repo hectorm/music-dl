@@ -7,9 +7,9 @@
 set -eu
 export LC_ALL=C
 
-printInfo() { [ -t 1 ] && printf -- '\033[0m[\033[1;32mINFO\033[0m] %s\n' "$@" || printf -- '[INFO] %s\n' "$@"; }
-printWarn() { [ -t 1 ] && printf -- '\033[0m[\033[1;33mWARN\033[0m] %s\n' "$@" >&2 || printf -- '[WARN] %s\n' "$@" >&2; }
-printError() { [ -t 1 ] && printf -- '\033[0m[\033[1;31mERROR\033[0m] %s\n' "$@" >&2 || printf -- '[ERROR] %s\n' "$@" >&2; }
+printInfo() { [ -t 1 ] && printf '\033[0m[\033[1;32mINFO\033[0m] %s\n' "$@" || printf '[INFO] %s\n' "$@"; }
+printWarn() { [ -t 1 ] && printf '\033[0m[\033[1;33mWARN\033[0m] %s\n' "$@" >&2 || printf '[WARN] %s\n' "$@" >&2; }
+printError() { [ -t 1 ] && printf '\033[0m[\033[1;31mERROR\033[0m] %s\n' "$@" >&2 || printf '[ERROR] %s\n' "$@" >&2; }
 
 main() {
 	OUT_DIR=${DESTDIR:-${HOME:?}/Downloads/}
