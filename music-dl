@@ -19,7 +19,14 @@ main() {
 	trap 'rm -rf "${TMP_DIR:?}"; trap - EXIT; exit 0' EXIT TERM INT HUP
 
 	printInfo 'Downloading files...'
-	if command -v youtube-dl >/dev/null; then
+	if command -v yt-dlp >/dev/null; then
+		yt-dlp \
+			--no-continue \
+			--format 'bestaudio' \
+			--output "${TMP_DIR:?}/%(title)s.%(ext)s" \
+			--default-search 'ytsearch' \
+			-- "$@"
+	elif command -v youtube-dl >/dev/null; then
 		youtube-dl \
 			--no-continue \
 			--format 'bestaudio' \
