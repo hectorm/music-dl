@@ -16,7 +16,8 @@ main() {
 	mkdir -p "${OUT_DIR:?}"
 
 	TMP_DIR=$(mktemp -dt music-dl.XXXXXXXX)
-	trap 'rm -rf "${TMP_DIR:?}"; trap - EXIT; exit 0' EXIT TERM INT HUP
+	# shellcheck disable=SC2154
+	trap 'ret="$?"; rm -rf -- "${TMP_DIR:?}"; trap - EXIT; exit "${ret:?}"' EXIT TERM INT HUP
 
 	printInfo 'Downloading files...'
 	if command -v yt-dlp >/dev/null; then
