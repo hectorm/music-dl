@@ -5,33 +5,33 @@
 # License:    MIT, https://opensource.org/licenses/MIT
 
 set -eu
-export LC_ALL=C
+export LC_ALL='C'
 
-printInfo() { [ -t 1 ] && printf '\033[0m[\033[1;32mINFO\033[0m] %s\n' "$@" || printf '[INFO] %s\n' "$@"; }
-printWarn() { [ -t 1 ] && printf '\033[0m[\033[1;33mWARN\033[0m] %s\n' "$@" >&2 || printf '[WARN] %s\n' "$@" >&2; }
-printError() { [ -t 1 ] && printf '\033[0m[\033[1;31mERROR\033[0m] %s\n' "$@" >&2 || printf '[ERROR] %s\n' "$@" >&2; }
+printInfo() { [ -t 1 ] && printf '\033[0m[\033[1;32mINFO\033[0m] %s\n' "${@}" || printf '[INFO] %s\n' "${@}"; }
+printWarn() { [ -t 1 ] && printf '\033[0m[\033[1;33mWARN\033[0m] %s\n' "${@}" >&2 || printf '[WARN] %s\n' "${@}" >&2; }
+printError() { [ -t 1 ] && printf '\033[0m[\033[1;31mERROR\033[0m] %s\n' "${@}" >&2 || printf '[ERROR] %s\n' "${@}" >&2; }
 
 main() {
-	OUT_DIR=${DESTDIR:-${HOME:?}/Downloads/}
-	mkdir -p "${OUT_DIR:?}"
+	outDir="${DESTDIR:-${HOME:?}/Downloads/}"
+	[ -e "${outDir:?}" ] || mkdir -p "${outDir:?}"
 
-	TMP_DIR=$(mktemp -dt music-dl.XXXXXXXX)
+	tmpDir="$(mktemp -dt music-dl.XXXXXXXX)"
 	# shellcheck disable=SC2154
-	trap 'ret="$?"; rm -rf -- "${TMP_DIR:?}"; trap - EXIT; exit "${ret:?}"' EXIT TERM INT HUP
+	trap 'ret="$?"; rm -rf -- "${tmpDir:?}"; trap - EXIT; exit "${ret:?}"' EXIT TERM INT HUP
 
 	printInfo 'Downloading files...'
 	if command -v yt-dlp >/dev/null; then
 		yt-dlp \
 			--no-continue \
 			--format 'bestaudio' \
-			--output "${TMP_DIR:?}/%(title)s.%(ext)s" \
+			--output "${tmpDir:?}/%(title)s.%(ext)s" \
 			--default-search 'ytsearch' \
 			-- "$@"
 	elif command -v youtube-dl >/dev/null; then
 		youtube-dl \
 			--no-continue \
 			--format 'bestaudio' \
-			--output "${TMP_DIR:?}/%(title)s.%(ext)s" \
+			--output "${tmpDir:?}/%(title)s.%(ext)s" \
 			--default-search 'ytsearch' \
 			-- "$@"
 	else
@@ -41,9 +41,9 @@ main() {
 
 	printInfo 'Encoding files to VBR MP3 and trimming silence...'
 	if command -v ffmpeg >/dev/null; then
-		for inFile in "${TMP_DIR:?}"/*; do
-			outFile=${inFile%.*}.mp3
-			tmpFile=$(mktemp -ut .XXXXXXXX.mp3 -p "${TMP_DIR:?}")
+		for inFile in "${tmpDir:?}"/*; do
+			outFile="${inFile%.*}.mp3"
+			tmpFile="$(mktemp -ut .XXXXXXXX.mp3 -p "${tmpDir:?}")"
 			silenceremove='start_periods=1:start_duration=1:start_threshold=-60dB:detection=peak'
 			filters="silenceremove=${silenceremove:?},aformat=dblp,areverse,silenceremove=${silenceremove:?},aformat=dblp,areverse"
 			ffmpeg -hide_banner -i "${inFile:?}" -codec:a libmp3lame -qscale:a 2 -af "${filters:?}" "${tmpFile:?}"
@@ -55,17 +55,17 @@ main() {
 
 	printInfo 'Cleaning metadata...'
 	if command -v mat2 >/dev/null; then
-		find "${TMP_DIR:?}" -type f -name '*.mp3' -exec mat2 --inplace '{}' ';'
+		find "${tmpDir:?}" -type f -name '*.mp3' -exec mat2 --inplace '{}' ';'
 	elif command -v id3convert >/dev/null; then
-		find "${TMP_DIR:?}" -type f -name '*.mp3' -exec id3convert --strip '{}' ';'
+		find "${tmpDir:?}" -type f -name '*.mp3' -exec id3convert --strip '{}' ';'
 	elif command -v eyeD3 >/dev/null; then
-		find "${TMP_DIR:?}" -type f -name '*.mp3' -exec eyeD3 --remove-all '{}' ';'
+		find "${tmpDir:?}" -type f -name '*.mp3' -exec eyeD3 --remove-all '{}' ';'
 	else
 		printWarn 'mat2, id3convert or eyeD3 are required for this step'
 	fi
 
 	printInfo 'Moving files to output directory...'
-	find "${TMP_DIR:?}" -type f -name '*.mp3' -exec mv -f '{}' "${OUT_DIR:?}"/ ';'
+	find "${tmpDir:?}" -type f -name '*.mp3' -exec mv -f -- '{}' "${outDir:?}"/ ';'
 }
 
-main "$@"
+main "${@-}"
