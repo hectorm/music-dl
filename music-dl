@@ -34,7 +34,7 @@ main() {
 			--default-search 'ytsearch' \
 			-- "$@"
 	else
-		printError 'youtube-dl is required for this step'
+		printError 'yt-dlp or youtube-dl are required for this step'
 		exit 1
 	fi
 
