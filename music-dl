@@ -19,53 +19,36 @@ main() {
 	# shellcheck disable=SC2154
 	trap 'ret="$?"; rm -rf -- "${tmpDir:?}"; trap - EXIT; exit "${ret:?}"' EXIT TERM INT HUP
 
-	printInfo 'Downloading files...'
-	if command -v yt-dlp >/dev/null; then
-		yt-dlp \
-			--no-continue \
-			--format 'bestaudio' \
-			--output "${tmpDir:?}/%(title)s.%(ext)s" \
-			--default-search 'ytsearch' \
-			-- "$@"
-	elif command -v youtube-dl >/dev/null; then
-		youtube-dl \
-			--no-continue \
-			--format 'bestaudio' \
-			--output "${tmpDir:?}/%(title)s.%(ext)s" \
-			--default-search 'ytsearch' \
-			-- "$@"
+	ffmpegCmd=''
+	if command -v ffmpeg >/dev/null; then ffmpegCmd='ffmpeg'
 	else
-		printError 'yt-dlp or youtube-dl are required for this step'
+		printError 'ffmpeg is required for this script'
 		exit 1
 	fi
 
+	ytDlpCmd=''
+	if command -v yt-dlp >/dev/null; then ytDlpCmd='yt-dlp'
+	elif command -v youtube-dl >/dev/null; then ytDlpCmd='youtube-dl'
+	else
+		printError 'yt-dlp or youtube-dl are required for this script'
+		exit 1
+	fi
+
+	printInfo 'Downloading files...'
+	"${ytDlpCmd:?}" \
+		--no-continue \
+		--format 'bestaudio' \
+		--output "${tmpDir:?}/%(title)s.%(ext)s" \
+		--default-search 'ytsearch' \
+		-- "$@"
+
 	printInfo 'Encoding files to VBR MP3 and trimming silence...'
-	if command -v ffmpeg >/dev/null; then
-		for inFile in "${tmpDir:?}"/*; do
-			outFile="${inFile%.*}.mp3"
-			tmpFile="$(mktemp -ut .XXXXXXXX.mp3 -p "${tmpDir:?}")"
-			silenceremove='start_periods=1:start_duration=1:start_threshold=-60dB:detection=peak'
-			filters="silenceremove=${silenceremove:?},aformat=dblp,areverse,silenceremove=${silenceremove:?},aformat=dblp,areverse"
-			ffmpeg -hide_banner -i "${inFile:?}" -codec:a libmp3lame -qscale:a 2 -af "${filters:?}" "${tmpFile:?}"
-			rm -f "${inFile:?}"; mv -f "${tmpFile:?}" "${outFile:?}"
-		done
-	else
-		printWarn 'ffmpeg is required for this step'
-	fi
-
-	printInfo 'Cleaning metadata...'
-	if command -v mat2 >/dev/null; then
-		find "${tmpDir:?}" -type f -name '*.mp3' -exec mat2 --inplace '{}' ';'
-	elif command -v id3convert >/dev/null; then
-		find "${tmpDir:?}" -type f -name '*.mp3' -exec id3convert --strip '{}' ';'
-	elif command -v eyeD3 >/dev/null; then
-		find "${tmpDir:?}" -type f -name '*.mp3' -exec eyeD3 --remove-all '{}' ';'
-	else
-		printWarn 'mat2, id3convert or eyeD3 are required for this step'
-	fi
-
-	printInfo 'Moving files to output directory...'
-	find "${tmpDir:?}" -type f -name '*.mp3' -exec mv -f -- '{}' "${outDir:?}"/ ';'
+	for inFile in "${tmpDir:?}"/*; do
+		outFile="${outDir:?}/${inFile##*/}"; outFile="${outFile%.*}.mp3"
+		silenceremove='start_periods=1:start_duration=1:start_threshold=-60dB:detection=peak'
+		filters="silenceremove=${silenceremove:?},aformat=dblp,areverse,silenceremove=${silenceremove:?},aformat=dblp,areverse"
+		"${ffmpegCmd:?}" -hide_banner -i "${inFile:?}" -codec:a libmp3lame -qscale:a 2 -af "${filters:?}" -map_metadata -1 -fflags +bitexact -y "${outFile:?}"
+	done
 }
 
 main "${@-}"
