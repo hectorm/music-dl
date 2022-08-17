@@ -42,12 +42,17 @@ main() {
 		--default-search 'ytsearch' \
 		-- "$@"
 
-	printInfo 'Encoding files to VBR MP3 and trimming silence...'
-	for inFile in "${tmpDir:?}"/*; do
-		outFile="${outDir:?}/${inFile##*/}"; outFile="${outFile%.*}.mp3"
+	printInfo 'Encoding files to Opus and trimming silence...'
+	for inFile in "${tmpDir:?}"/*.*; do
+		outFile="${outDir:?}/${inFile##*/}"; outFile="${outFile%.*}.opus"
 		silenceremove='start_periods=1:start_duration=1:start_threshold=-60dB:detection=peak'
-		filters="silenceremove=${silenceremove:?},aformat=dblp,areverse,silenceremove=${silenceremove:?},aformat=dblp,areverse"
-		"${ffmpegCmd:?}" -hide_banner -i "${inFile:?}" -codec:a libmp3lame -qscale:a 2 -af "${filters:?}" -map_metadata -1 -fflags +bitexact -y "${outFile:?}"
+		filter="silenceremove=${silenceremove:?},aformat=dblp,areverse,silenceremove=${silenceremove:?},aformat=dblp,areverse"
+		"${ffmpegCmd:?}" -hide_banner \
+			-i "${inFile:?}" \
+			-codec:a libopus -b:a 160000 -vbr on -compression_level 10 -application audio \
+			-bitexact -map_metadata -1 \
+			-af "${filter:?}" \
+			-y "${outFile:?}"
 	done
 }
 
