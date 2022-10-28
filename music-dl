@@ -51,7 +51,7 @@ main() {
 			-i "${inFile:?}" \
 			-codec:a libopus -b:a 160000 -vbr on -compression_level 10 -application audio \
 			-bitexact -map_metadata -1 \
-			-af "${filter:?}" \
+			-filter:a "${filter:?}" \
 			-y "${outFile:?}"
 	done
 }
