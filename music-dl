@@ -45,7 +45,7 @@ main() {
 	printInfo 'Encoding files to Opus and trimming silence...'
 	for inFile in "${tmpDir:?}"/*.*; do
 		outFile="${outDir:?}/${inFile##*/}"; outFile="${outFile%.*}.opus"
-		filter='silenceremove=start_periods=1:start_threshold=-60dB:start_silence=1:stop_periods=1:stop_threshold=-60dB:stop_silence=1:detection=peak'
+		filter='silenceremove=start_periods=1:start_threshold=-90dB:start_silence=1:stop_periods=1:stop_threshold=-90dB:stop_silence=1:detection=peak'
 		"${ffmpegCmd:?}" -hide_banner \
 			-i "${inFile:?}" \
 			-codec:a libopus -b:a 160000 -vbr on -compression_level 10 -application audio \
